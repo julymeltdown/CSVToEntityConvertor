@@ -14,7 +14,7 @@ object CsvValidator {
         // CSV 파일이 비어있는지 확인
         val header: Array<out String> = reader.readNext() ?: throw CsvException("CSV file is empty")
 
-        // WeatherInfo의 모든 필드명 가져옴
+        // Entity의 모든 필드명 가져옴
         val fields = entityClass.kotlin.memberProperties.mapNotNull { it.javaField }.toList()
 
         // csv 파일의 컬럼명이랑 entity 필드명 같은지다른지 확인
