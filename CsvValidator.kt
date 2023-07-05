@@ -1,5 +1,3 @@
-import com.opencsv.CSVReader
-import com.opencsv.exceptions.CsvException
 import org.springframework.web.multipart.MultipartFile
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -9,32 +7,32 @@ import kotlin.reflect.jvm.javaField
 
 object CsvValidator {
     fun <T : Any> validateCsvFile(file: MultipartFile, entityClass: Class<T>, ignoredFields: List<String> = emptyList()): List<T> {
-        val reader = CSVReader(BufferedReader(InputStreamReader(file.inputStream)))
-
+        val reader = BufferedReader(InputStreamReader(file.inputStream))
         // CSV 파일이 비어있는지 확인
-        val header: Array<out String> = reader.readNext() ?: throw CsvException("CSV file is empty")
-
-        // Entity의 모든 필드명 가져옴
+        val header: Array<out String> = reader.readLine()?.split(",")?.toTypedArray()
+                ?: throw Exception("CSV file is empty")
+        println(header)
+        // Class의 모든 필드명 가져옴
         val fields = entityClass.kotlin.memberProperties.mapNotNull { it.javaField }.toList()
 
         // csv 파일의 컬럼명이랑 entity 필드명 같은지다른지 확인
         if (header.size != fields.size - ignoredFields.size) {
-            throw CsvException("Number of columns in CSV file doesn't match number of fields in entity class")
+            throw Exception("Number of columns in CSV file doesn't match number of fields in entity class")
         }
 
         for (i in header.indices) {
             if (fields.find { it.name == header[i] } == null) {
-                throw CsvException("CSV file's column names are not in the entity class's field names")
+                throw Exception("CSV file's column names are not in the entity class's field names")
             }
         }
 
         var line: Array<String>?
         val resultEntityList = mutableListOf<T>()
-        while (reader.readNext().also { line = it } != null) {
+        while (reader.readLine().also { line = it?.split(",")?.toTypedArray() } != null) {
             val entityInstance = entityClass.getDeclaredConstructor().newInstance()
 
             if (line!!.size != fields.size - ignoredFields.size) {
-                throw CsvException("Number of values in a row doesn't match number of fields in entity class")
+                throw Exception("Number of values in a row doesn't match number of fields in entity class")
             }
 
             for (i in line!!.indices) {
@@ -48,7 +46,7 @@ object CsvValidator {
                 field.trySetAccessible()
                 try {
                     val value = line!![i]
-                    when(field.type) {
+                    when (field.type) {
                         String::class.java -> field.set(entityInstance, value)
                         Long::class.java -> field.set(entityInstance, value.toLong())
                         Float::class.java -> field.set(entityInstance, value.toFloat())
